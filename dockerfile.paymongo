@@ -1,0 +1,29 @@
+FROM arm64v8/ruby:3.0.6@sha256:d0f8be19feea1b07b2341a2ad48317d13c87bae59380372b594058eb2622ec17 as build
+
+WORKDIR /app
+
+COPY Gemfile Gemfile
+COPY Gemfile.lock Gemfile.lock
+
+RUN gem install bundler:2.4.13
+
+RUN bundle _2.4.13_ install
+
+COPY . .
+
+FROM arm64v8/ruby:3.0.6-slim@sha256:361f05659d1ffc2c63568ac35b97347c57a5ca01b2ab493e864d8ee6fb9425cc as app
+
+RUN apt update && \
+    apt install -y \
+    libpq-dev \
+    shared-mime-info \
+    dumb-init
+
+COPY --from=build /usr/local/bundle/ /usr/local/bundle/
+COPY --from=build /app /app
+
+WORKDIR /app
+
+EXPOSE 3000
+
+CMD ["dumb-init", "bundle", "exec", "rails", "s", "-b", "0.0.0.0"]
