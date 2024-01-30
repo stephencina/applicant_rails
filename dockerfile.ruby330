@@ -1,0 +1,27 @@
+FROM arm64v8/ruby:3.3.0 as build
+
+WORKDIR /app
+
+COPY Gemfile Gemfile
+COPY Gemfile.lock Gemfile.lock
+
+RUN gem install bundler:2.5.5
+
+COPY . .
+
+FROM arm64v8/ruby:3.3.0-slim@sha256:5c94ba73db740b1f2a7a4738b68bcf507e31b70e24483a82af98084803ea3228 as app
+
+RUN apt update && \
+    apt install -y \
+    libpq-dev \
+    shared-mime-info \
+    dumb-init
+
+COPY --from=build /usr/local/bundle/ /usr/local/bundle/
+COPY --from=build /app /app
+
+WORKDIR /app
+
+EXPOSE 3000
+
+CMD ["dumb-init", "bundle", "exec", "rails", "s", "-b", "0.0.0.0"]
